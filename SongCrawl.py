@@ -13,7 +13,8 @@ class CrawlClass:
                 'updateLatestInfo' : "UPDATE LatestInfoTbl SET Date = '{0}' WHERE FileName = '{1}';",
                 'insertLatestInfo' :  "INSERT INTO LatestInfoTbl (FileName, Date) VALUES ('{0}','{1}');",
                 'selectDateLatestInfo' :  "SELECT Date FROM LatestInfoTbl WHERE FileName='{0}';",
-                'createRssTbl'  : "CREATE TABLE RssTable(No text, Title text, Link text, Category text, Author text, PubDate text, Article text);"
+                'createRssTbl'  : "CREATE TABLE RssTable(No INT PRIMARY KEY, Title text, Link text, Category text, Author text, PubDate text, Article text);",
+                'selectTop1RssTbl'  : "SELECT No FROM pydb.RssTable ORDER BY No DESC limit 1;"
                 }
 
          # DB Setting. './test.db'
@@ -46,18 +47,25 @@ class CrawlClass:
                                 item.pubDate.name : item.pubDate.string,
                                 item.description.name : item.description.string }
 
+                self.cur.execute(self.sqlQuery['selectTop1RssTbl'])
+                top1Entry = self.cur.fetchone()
+                top1Value = 0
+                if top1Entry is not None:
+                        top1Value = int(top1Entry[0])
+
                 for dictRssKey in dictRss:
-                        self.cur.execute(
-                                'INSERT INTO RssTable VALUES(%s, %s, %s, %s, %s, %s, %s);', (
-                                       dictRssKey, 
-                                        dictRss[dictRssKey]['title'], 
-                                        dictRss[dictRssKey]['link'], 
-                                        dictRss[dictRssKey]['category'], 
-                                        dictRss[dictRssKey]['author'], 
-                                        dictRss[dictRssKey]['pubDate'], 
-                                        dictRss[dictRssKey]['description']
+                        if int(dictRssKey) > top1Value :
+                                self.cur.execute(
+                                        'INSERT INTO RssTable VALUES(%s, %s, %s, %s, %s, %s, %s);', (
+                                                int(dictRssKey), 
+                                                dictRss[dictRssKey]['title'], 
+                                                dictRss[dictRssKey]['link'], 
+                                                dictRss[dictRssKey]['category'], 
+                                                dictRss[dictRssKey]['author'], 
+                                                dictRss[dictRssKey]['pubDate'], 
+                                                dictRss[dictRssKey]['description']
+                                                )
                                         )
-                                )
 
                 self.con.commit()        
 
