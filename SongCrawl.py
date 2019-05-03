@@ -2,36 +2,35 @@
 
 import requests
 from bs4 import BeautifulSoup
-import pymysql
+import pyodbc
 import sys
 
 class CrawlClass:
         # Sql query
         sqlQuery = { 
-                'existMaster' : "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='{0}';",
-                'createLatestInfoTbl' : "CREATE TABLE LatestInfoTbl(FileName text, Date text);",
-                'updateLatestInfo' : "UPDATE LatestInfoTbl SET Date = '{0}' WHERE FileName = '{1}';",
-                'insertLatestInfo' :  "INSERT INTO LatestInfoTbl (FileName, Date) VALUES ('{0}','{1}');",
-                'selectDateLatestInfo' :  "SELECT Date FROM LatestInfoTbl WHERE FileName='{0}';",
-                'createRssTbl'  : "CREATE TABLE RssTable(No INT PRIMARY KEY, Title text, Link text, Category text, Author text, PubDate text, Article text);",
-                'selectTop1RssTbl'  : "SELECT No FROM pydb.RssTable ORDER BY No DESC limit 1;"
+                'existMaster' : "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=?;",
+                'createLatestInfoTbl' : "CREATE TABLE LatestInfoTbl(FileName nvarchar(100) PRIMARY KEY, Date nvarchar(100));",
+                'updateLatestInfo' : "UPDATE LatestInfoTbl SET Date = ? WHERE FileName = ?;",
+                'insertLatestInfo' :  "INSERT INTO LatestInfoTbl (FileName, Date) VALUES (?,?);",
+                'selectDateLatestInfo' :  "SELECT Date FROM LatestInfoTbl WHERE FileName=?;",
+                'createRssTbl'  : "CREATE TABLE RssTable(No INT PRIMARY KEY, Title nvarchar(MAX), Link nvarchar(MAX), Category nvarchar(MAX), Author nvarchar(MAX), PubDate nvarchar(100), Article nvarchar(MAX));",
+                'selectTop1RssTbl'  : "SELECT Top 1 No FROM RssTable ORDER BY No DESC;"
                 }
 
          # DB Setting. './test.db'
-        def __init__( self, mysqlDbPath ):               
-                self.con = pymysql.connect(host='localhost', user='tester', password=None,
-                       db=mysqlDbPath, charset='utf8mb4')
+        def __init__( self, odbcConnectInfo ):               
+                self.con = pyodbc.connect(odbcConnectInfo)
                 self.cur = self.con.cursor()
 
         # Create LatestInfoTbl if not exist
         def __CreateLatestInfoTblIfNotExist(self):             
-                self.cur.execute( self.sqlQuery['existMaster'].format('LatestInfoTbl',))
+                self.cur.execute( self.sqlQuery['existMaster'], 'LatestInfoTbl')
                 if self.cur.fetchone()[0] == 0:
                         self.cur.execute(self.sqlQuery['createLatestInfoTbl'])
                         self.con.commit()
 
         def __CreateRssTblIfNotExist(self):             
-                self.cur.execute( self.sqlQuery['existMaster'].format('RssTable',))
+                self.cur.execute( self.sqlQuery['existMaster'], 'RssTable')
                 if self.cur.fetchone()[0] == 0:
                         self.cur.execute(self.sqlQuery['createRssTbl'])
                         self.con.commit()
@@ -56,7 +55,7 @@ class CrawlClass:
                 for dictRssKey in dictRss:
                         if int(dictRssKey) > top1Value :
                                 self.cur.execute(
-                                        'INSERT INTO RssTable VALUES(%s, %s, %s, %s, %s, %s, %s);', (
+                                        "INSERT INTO RssTable VALUES(?, ?, ?, ?, ?, ?, ?);", (
                                                 int(dictRssKey), 
                                                 dictRss[dictRssKey]['title'], 
                                                 dictRss[dictRssKey]['link'], 
@@ -77,20 +76,20 @@ class CrawlClass:
                 bsObject = BeautifulSoup(html.content, 'xml') 
                 lastBuildData = bsObject.find('lastBuildDate')
 
-                self.cur.execute(self.sqlQuery['selectDateLatestInfo'].format('rss_30000001.xml',))
+                self.cur.execute(self.sqlQuery['selectDateLatestInfo'], 'rss_30000001.xml')
                 latestDate = self.cur.fetchone()                                
                 if latestDate == lastBuildData.string :
                         return
                 
-                self.cur.execute(self.sqlQuery['selectDateLatestInfo'].format('rss_30000001.xml',))
+                self.cur.execute(self.sqlQuery['selectDateLatestInfo'], 'rss_30000001.xml')
                 entry = self.cur.fetchone()
 
                 if entry is None:                
-                        self.cur.execute(self.sqlQuery['insertLatestInfo'].format('rss_30000001.xml', lastBuildData.string))
+                        self.cur.execute(self.sqlQuery['insertLatestInfo'], 'rss_30000001.xml', lastBuildData.string)
                         self.con.commit()
                         print ('Insert %s' % 'rss_30000001')        
                 else :
-                        self.cur.execute(self.sqlQuery['updateLatestInfo'].format(lastBuildData.string, 'rss_30000001.xml'))
+                        self.cur.execute(self.sqlQuery['updateLatestInfo'], lastBuildData.string, 'rss_30000001.xml')
                         self.con.commit()
                         print ('Update %s' % lastBuildData.string)                        
 

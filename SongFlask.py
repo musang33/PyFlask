@@ -1,13 +1,21 @@
 import time, threading
-import pymysql
+import pyodbc
 from flask import Flask
 from flask import render_template
 
 import SongCrawl 
 
+server = 'inshalla.database.windows.net'
+database = 'pydb'
+username = 'inshalla'
+password = '123qwe!@#'
+driver= '{ODBC Driver 17 for SQL Server}'
+
+odbcConnectInfo = 'DRIVER='+driver+';SERVER='+server+';PORT=1433;DATABASE='+database+';UID='+username+';PWD='+ password
+
 
 def PeriodicallyCall() :    
-    crawl = SongCrawl.CrawlClass('pydb')
+    crawl = SongCrawl.CrawlClass(odbcConnectInfo)
     crawl.ParseRss()            
     threading.Timer(10, PeriodicallyCall).start()    
 
@@ -16,8 +24,7 @@ def PeriodicallyCall() :
 if __name__ == '__main__':            
     PeriodicallyCall()       
 
-    con = pymysql.connect(host='localhost', user='tester', password=None,
-                    db='pydb', charset='utf8mb4')
+    con = pyodbc.connect(odbcConnectInfo)
     cur = con.cursor()
     
     app = Flask(__name__)
