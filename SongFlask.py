@@ -21,22 +21,22 @@ def PeriodicallyCall() :
 
 
 
-if __name__ == '__main__':            
-    PeriodicallyCall()       
+#if __name__ == '__main__':            
+PeriodicallyCall()       
 
-    con = pyodbc.connect(odbcConnectInfo)
-    cur = con.cursor()
-    
-    app = Flask(__name__)
-    @app.route("/")
-    def home():
-        return "Hello, Flask!"
+con = pyodbc.connect(odbcConnectInfo)
+cur = con.cursor()
 
-    @app.route('/print_items')
-    def print_items():
-        cur.execute("SELECT * FROM RssTable;")
-        rows = cur.fetchall()
-        return render_template('print_items.html', items=rows)
+app = Flask(__name__)
+@app.route("/")
+def home():
+    return "Hello, Flask!"
 
-    app.run(debug=True)  
+@app.route('/print_items')
+def print_items():
+    cur.execute("SELECT * FROM RssTable;")
+    rows = cur.fetchall()
+    return render_template('print_items.html', items=rows)
+
+ #   app.run(debug=True)  
    
